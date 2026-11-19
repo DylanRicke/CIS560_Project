@@ -1,0 +1,43 @@
+@functions {
+    string Active(string prefix) =>
+        (ViewContext.RouteData.Values["page"] as string ?? "").StartsWith(prefix) ? "active" : "";
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>@ViewData["Title"] · Pub Stats</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <header class="topbar">
+        <div class="wrap topbar-inner">
+            <a class="brand" href="/">Pub<span>Stats</span></a>
+            <nav class="nav" aria-label="Main">
+                <a class="@Active("/Matches/Index")@Active("/Matches/Details")@Active("/Matches/Edit")" asp-page="/Matches/Index">Matches</a>
+                <a class="@Active("/Matches/Import")" asp-page="/Matches/Import">Import match</a>
+                <a class="@Active("/Players")" asp-page="/Players/Index">Players</a>
+                <a class="@Active("/Compare")" asp-page="/Compare/Index">Compare friends</a>
+                <a class="@Active("/Manage/Maps")" asp-page="/Manage/Maps">Maps</a>
+                <a class="@Active("/Manage/Modes")" asp-page="/Manage/Modes">Game modes</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="wrap page">
+        @if (TempData["Message"] is string message)
+        {
+            <div class="notice" role="status">@message</div>
+        }
+        @RenderBody()
+    </main>
+
+    <footer class="wrap footer">CS pub match stat tracker · class project</footer>
+
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

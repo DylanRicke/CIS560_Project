@@ -1,0 +1,106 @@
+@page
+@model CSStatTracker.Pages.Matches.ImportModel
+@{
+    ViewData["Title"] = "Import a match";
+    var teams = new[] { (Number: 1, Rows: Model.Input.Team1), (Number: 2, Rows: Model.Input.Team2) };
+}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Manual data import</p>
+        <h1>Import a match</h1>
+        <p class="sub">Enter the final score, then each player's line from the end-of-match scoreboard. Each player's win, loss or tie comes from their team and the score. Leave a row's player blank to skip it; blank numbers count as 0.</p>
+    </div>
+</div>
+
+<partial name="_Errors" model="ViewData.ModelState" />
+
+<form method="post" id="import-form" class="section">
+    <div class="panel">
+        <div class="form-grid">
+            <label>Map
+                <select name="Input.MapId" required>
+                    <option value="">Choose a map</option>
+                    @foreach (var m in Model.Maps)
+                    {
+                        <option value="@m.MapId" selected="@(m.MapId == Model.Input.MapId)">@m.MapName (@m.MapType)</option>
+                    }
+                </select>
+            </label>
+            <label>Game mode
+                <select name="Input.GameModeId" id="mode" required>
+                    @foreach (var m in Model.Modes)
+                    {
+                        <option value="@m.GameModeId" data-players-per-team="@m.PlayersPerTeam" data-max-rounds="@m.MaxRounds"
+                                selected="@(m.GameModeId == Model.Input.GameModeId)">@m.ModeName (@m.PlayersPerTeam v @m.PlayersPerTeam)</option>
+                    }
+                </select>
+            </label>
+            <label>Played on
+                <input type="datetime-local" name="Input.MatchDate" required
+                       value="@Model.Input.MatchDate?.ToString("yyyy-MM-ddTHH:mm")" />
+            </label>
+            <label>Team 1 score
+                <input type="number" name="Input.Team1Score" id="score1" min="0" max="60" required value="@Model.Input.Team1Score" />
+            </label>
+            <label>Team 2 score
+                <input type="number" name="Input.Team2Score" id="score2" min="0" max="60" required value="@Model.Input.Team2Score" />
+            </label>
+        </div>
+    </div>
+
+    <div class="teams">
+        @foreach (var team in teams)
+        {
+            <section class="team-block" data-team="@team.Number">
+                <h3>Team @team.Number <span class="outcome hint" data-outcome="@team.Number"></span></h3>
+                <div class="table-wrap">
+                    <table class="data stat-grid">
+                        <thead>
+                            <tr>
+                                <th>Player</th>
+                                <th class="num">K</th>
+                                <th class="num">D</th>
+                                <th class="num">A</th>
+                                <th class="num">HS</th>
+                                <th class="num">Damage</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (var i = 0; i < team.Rows.Count; i++)
+                            {
+                                var row = team.Rows[i];
+                                var prefix = $"Input.Team{team.Number}[{i}]";
+                                <tr data-row="@i">
+                                    <td>
+                                        <select name="@(prefix).PlayerId" aria-label="Team @team.Number player @(i + 1)">
+                                            <option value="">—</option>
+                                            @foreach (var p in Model.PlayerOptions)
+                                            {
+                                                <option value="@p.Value" selected="@(p.Value == row.PlayerId?.ToString())">@p.Text</option>
+                                            }
+                                        </select>
+                                    </td>
+                                    <td><input type="number" name="@(prefix).Kills" value="@row.Kills" min="0" max="200" aria-label="Kills" /></td>
+                                    <td><input type="number" name="@(prefix).Deaths" value="@row.Deaths" min="0" max="200" aria-label="Deaths" /></td>
+                                    <td><input type="number" name="@(prefix).Assists" value="@row.Assists" min="0" max="200" aria-label="Assists" /></td>
+                                    <td><input type="number" name="@(prefix).HeadshotCount" value="@row.HeadshotCount" min="0" max="200" aria-label="Headshots" /></td>
+                                    <td><input type="number" name="@(prefix).Damage" value="@row.Damage" min="0" max="50000" aria-label="Damage" /></td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+        }
+    </div>
+
+    <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Save match</button>
+        <a class="btn" asp-page="/Matches/Index">Cancel</a>
+    </div>
+</form>
+
+@section Scripts {
+    <script src="~/js/import.js" asp-append-version="true"></script>
+}

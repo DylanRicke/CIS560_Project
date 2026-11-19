@@ -1,0 +1,65 @@
+@page
+@model CSStatTracker.Pages.Players.IndexModel
+@{
+    ViewData["Title"] = "Players";
+}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Roster</p>
+        <h1>Players</h1>
+        <p class="sub">@Fmt.Int(Model.Results.Count) players@(string.IsNullOrWhiteSpace(Model.Search) && Model.Rank is null ? "" : " match your search"). Open a player for their totals, best maps and monthly trend.</p>
+    </div>
+    <a class="btn btn-primary" asp-page="/Players/Edit">Add a player</a>
+</div>
+
+<form method="get" class="filters" aria-label="Search players">
+    <label>Username or email
+        <input type="search" name="Search" value="@Model.Search" placeholder="e.g. falcon" />
+    </label>
+    <label>Rank
+        <select name="Rank">
+            <option value="">Any rank</option>
+            @foreach (var r in Ranks.All)
+            {
+                <option value="@r" selected="@(r == Model.Rank)">@r</option>
+            }
+        </select>
+    </label>
+    <div class="actions">
+        <button class="btn btn-primary" type="submit">Search</button>
+        <a class="btn" asp-page="/Players/Index">Clear</a>
+    </div>
+</form>
+
+<div class="table-wrap">
+    <table class="data">
+        <thead>
+            <tr>
+                <th>Username</th>
+                <th>Rank</th>
+                <th>Email</th>
+                <th>Joined</th>
+                <th class="num">Matches</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Results.Count == 0)
+            {
+                <tr><td colspan="6" class="empty">No players match that search.</td></tr>
+            }
+            @foreach (var p in Model.Results)
+            {
+                <tr>
+                    <td><a class="row-link" asp-page="/Players/Profile" asp-route-id="@p.PlayerId">@p.Username</a></td>
+                    <td>@p.Rank</td>
+                    <td>@p.Email</td>
+                    <td>@Fmt.Day(p.JoinDate)</td>
+                    <td class="num">@Fmt.Int(p.GamesPlayed)</td>
+                    <td><a asp-page="/Players/Edit" asp-route-id="@p.PlayerId">Edit</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

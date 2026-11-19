@@ -1,0 +1,15 @@
+@page
+@model CSStatTracker.Pages.ErrorModel
+@{
+    ViewData["Title"] = "Something went wrong";
+}
+<div class="page-head">
+    <div>
+        <h1>Something went wrong</h1>
+        <p class="sub">The page couldn't load. Check that SQL Server is running and that the connection string in appsettings.json points at the CSStats database.</p>
+        @if (Model.RequestId is not null)
+        {
+            <p class="hint">Request ID: <code>@Model.RequestId</code></p>
+        }
+    </div>
+</div>

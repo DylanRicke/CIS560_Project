@@ -1,0 +1,97 @@
+@page "{id:int}"
+@model CSStatTracker.Pages.Matches.DetailsModel
+@{
+    var m = Model.Match;
+    ViewData["Title"] = $"{m.MapName} {m.Team1Score}–{m.Team2Score}";
+}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Match #@m.MatchId · @m.ModeName</p>
+        <h1>@m.MapName</h1>
+        <div class="match-meta">
+            <span>Played <b>@Fmt.When(m.MatchDate)</b></span>
+            <span>Rounds <b>@m.RoundsPlayed</b></span>
+            <span>Players <b>@Model.Rows.Count</b></span>
+            @if (m.IsRemoved)
+            {
+                <span class="badge removed">Removed · left out of stats</span>
+            }
+        </div>
+    </div>
+    <div class="form-actions">
+        @if (!m.IsRemoved)
+        {
+            <a class="btn" asp-page="/Matches/Edit" asp-route-id="@m.MatchId">Edit match</a>
+        }
+        <form method="post" asp-page-handler="SetRemoved" asp-route-id="@m.MatchId">
+            <input type="hidden" name="remove" value="@(m.IsRemoved ? "false" : "true")" />
+            @if (m.IsRemoved)
+            {
+                <button class="btn" type="submit">Restore match</button>
+            }
+            else
+            {
+                <button class="btn btn-danger" type="submit">Remove match</button>
+            }
+        </form>
+    </div>
+</div>
+
+<div class="match-head" aria-label="Final score">
+    <div class="side">Team 1</div>
+    <div class="big-score">@m.Team1Score : @m.Team2Score</div>
+    <div class="side right">Team 2</div>
+</div>
+
+@foreach (var team in Model.Teams())
+{
+    <section class="section">
+        <div class="section-head">
+            <h2>@team.Title</h2>
+            @if (team.Outcome is not null)
+            {
+                <span class="hint">@team.Outcome</span>
+            }
+        </div>
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th class="num">K</th>
+                        <th class="num">D</th>
+                        <th class="num">A</th>
+                        <th class="num">K/D</th>
+                        <th class="num">HS %</th>
+                        <th class="num">Damage</th>
+                        <th class="num">ADR</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (team.Players.Count == 0)
+                    {
+                        <tr><td colspan="9" class="empty">No players recorded for this side.</td></tr>
+                    }
+                    @foreach (var r in team.Players)
+                    {
+                        <tr>
+                            <td><a class="row-link" asp-page="/Players/Profile" asp-route-id="@r.PlayerId">@r.Username</a></td>
+                            <td class="num">@r.Kills</td>
+                            <td class="num">@r.Deaths</td>
+                            <td class="num">@r.Assists</td>
+                            <td class="num">@Fmt.Num(r.Deaths == 0 ? null : (decimal)r.Kills / r.Deaths)</td>
+                            <td class="num">@Fmt.Pct(r.HeadshotPct)</td>
+                            <td class="num">@Fmt.Int(r.Damage)</td>
+                            <td class="num">@Fmt.Num(r.Adr, "0.0")</td>
+                            <td><span class="@Fmt.ResultClass(r.Result)">@r.Result</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+
+<p><a asp-page="/Matches/Index">← Back to matches</a></p>

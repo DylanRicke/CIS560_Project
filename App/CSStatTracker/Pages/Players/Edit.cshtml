@@ -1,0 +1,40 @@
+@page "{id:int?}"
+@model CSStatTracker.Pages.Players.EditModel
+@{
+    ViewData["Title"] = Model.IsNew ? "Add a player" : "Edit player";
+}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Players</p>
+        <h1>@(Model.IsNew ? "Add a player" : $"Edit {Model.Input.Username}")</h1>
+        <p class="sub">Usernames and emails must be unique. @(Model.IsNew ? "The join date is set to today." : "")</p>
+    </div>
+</div>
+
+<partial name="_Errors" model="ViewData.ModelState" />
+
+<form method="post" class="panel section">
+    <div class="form-grid">
+        <label>Username
+            <input asp-for="Input.Username" maxlength="32" required autocomplete="off" />
+        </label>
+        <label>Email
+            <input asp-for="Input.Email" type="email" maxlength="255" required />
+        </label>
+        <label>Rank
+            <select asp-for="Input.Rank" asp-items="@(new SelectList(Ranks.All))"></select>
+        </label>
+    </div>
+    <div class="form-actions">
+        <button class="btn btn-primary" type="submit">@(Model.IsNew ? "Add player" : "Save changes")</button>
+        @if (Model.IsNew)
+        {
+            <a class="btn" asp-page="/Players/Index">Cancel</a>
+        }
+        else
+        {
+            <a class="btn" asp-page="/Players/Profile" asp-route-id="@Model.PlayerId">Cancel</a>
+        }
+    </div>
+</form>

@@ -1,0 +1,75 @@
+@page "{id:int}"
+@model CSStatTracker.Pages.Matches.EditModel
+@{
+    var m = Model.Match;
+    ViewData["Title"] = $"Edit match #{m.MatchId}";
+}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Match #@m.MatchId · @m.ModeName</p>
+        <h1>Edit match</h1>
+        <p class="sub">Fix the map, the date or anyone's numbers. The score (@m.Team1Score–@m.Team2Score) and the player list stay as recorded, because each player's result depends on them. To change those, remove this match and import it again.</p>
+    </div>
+</div>
+
+<partial name="_Errors" model="ViewData.ModelState" />
+
+<form method="post" class="section">
+    <div class="panel">
+        <div class="form-grid">
+            <label>Map
+                <select name="Input.MapId" required>
+                    @foreach (var map in Model.Maps)
+                    {
+                        <option value="@map.MapId" selected="@(map.MapId == Model.Input.MapId)">@map.MapName (@map.MapType)</option>
+                    }
+                </select>
+            </label>
+            <label>Played on
+                <input type="datetime-local" name="Input.MatchDate" required value="@Model.Input.MatchDate?.ToString("yyyy-MM-ddTHH:mm")" />
+            </label>
+        </div>
+    </div>
+
+    <div class="table-wrap">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Player</th>
+                    <th>Side</th>
+                    <th class="num">K</th>
+                    <th class="num">D</th>
+                    <th class="num">A</th>
+                    <th class="num">HS</th>
+                    <th class="num">Damage</th>
+                </tr>
+            </thead>
+            <tbody>
+                @for (var i = 0; i < Model.Input.Rows.Count; i++)
+                {
+                    var row = Model.Input.Rows[i];
+                    var prefix = $"Input.Rows[{i}]";
+                    var name = Model.Players.TryGetValue(row.PlayerId, out var p) ? p.Username : $"Player {row.PlayerId}";
+                    <tr>
+                        <td>
+                            <input type="hidden" name="@(prefix).PlayerId" value="@row.PlayerId" />
+                            @name
+                        </td>
+                        <td>@Model.TeamLabel(row.PlayerId)</td>
+                        <td><input type="number" name="@(prefix).Kills" value="@row.Kills" min="0" max="200" required aria-label="Kills for @name" /></td>
+                        <td><input type="number" name="@(prefix).Deaths" value="@row.Deaths" min="0" max="@m.RoundsPlayed" required aria-label="Deaths for @name" /></td>
+                        <td><input type="number" name="@(prefix).Assists" value="@row.Assists" min="0" max="200" required aria-label="Assists for @name" /></td>
+                        <td><input type="number" name="@(prefix).HeadshotCount" value="@row.HeadshotCount" min="0" max="200" required aria-label="Headshots for @name" /></td>
+                        <td><input type="number" name="@(prefix).Damage" value="@row.Damage" min="0" max="50000" required aria-label="Damage for @name" /></td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+
+    <div class="form-actions">
+        <button class="btn btn-primary" type="submit">Save changes</button>
+        <a class="btn" asp-page="/Matches/Details" asp-route-id="@m.MatchId">Cancel</a>
+    </div>
+</form>
