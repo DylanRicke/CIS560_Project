@@ -1,0 +1,55 @@
+@page
+@model CSStatTracker.Pages.Manage.ModesModel
+@{
+    ViewData["Title"] = "Game modes";
+}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Manage</p>
+        <h1>Game modes</h1>
+        <p class="sub">Premier and Competitive are 5v5, Casual is 10v10 and Wingman is 2v2; the import form uses those team sizes. Any other mode uses 5v5 (see ModeRules in Data/Models.cs).</p>
+    </div>
+</div>
+
+@if (Model.Error is not null)
+{
+    <div class="error-box" role="alert"><strong>That didn't save.</strong> @Model.Error</div>
+}
+
+<form method="post" asp-page-handler="Add" class="filters" aria-label="Add a game mode">
+    <label>New mode name
+        <input name="modeName" maxlength="32" required placeholder="e.g. Retakes" />
+    </label>
+    <div class="actions"><button class="btn btn-primary" type="submit">Add mode</button></div>
+</form>
+
+<div class="table-wrap">
+    <table class="data">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th class="num">Team size</th>
+                <th class="num">Matches</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var m in Model.Modes)
+            {
+                var formId = $"mode-{m.GameModeId}";
+                <tr>
+                    <td><input form="@formId" name="modeName" value="@m.ModeName" maxlength="32" required aria-label="Name for @m.ModeName" /></td>
+                    <td class="num">@m.PlayersPerTeam v @m.PlayersPerTeam</td>
+                    <td class="num">@Fmt.Int(m.MatchCount)</td>
+                    <td>
+                        <form id="@formId" method="post" asp-page-handler="Update">
+                            <input type="hidden" name="gameModeId" value="@m.GameModeId" />
+                            <button class="btn btn-small" type="submit">Save</button>
+                        </form>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>

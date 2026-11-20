@@ -1,0 +1,125 @@
+@page "{id:int}"
+@model CSStatTracker.Pages.Matches.DetailsModel
+@{
+    var m = Model.Match;
+    ViewData["Title"] = $"{m.MapName} {m.Team1Score}–{m.Team2Score}";
+}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Match #@m.MatchId · @m.ModeName</p>
+        <h1>@m.MapName</h1>
+        <div class="match-meta">
+            <span>Played <b>@Fmt.When(m.MatchDate)</b></span>
+            <span>Rounds <b>@m.RoundsPlayed</b></span>
+            <span>Players <b>@Model.Rows.Count</b></span>
+        </div>
+    </div>
+    <div class="form-actions">
+        <a class="btn" asp-page="/Matches/Edit" asp-route-id="@m.MatchId">Edit match</a>
+        <form method="post" asp-page-handler="Delete" asp-route-id="@m.MatchId" class="inline-form">
+            <label class="check"><input type="checkbox" name="confirm" value="true" required /> Delete for good</label>
+            <button class="btn btn-danger" type="submit">Delete match</button>
+        </form>
+    </div>
+</div>
+
+<div class="match-head" aria-label="Final score">
+    <div class="side">Team 1</div>
+    <div class="big-score">@m.Team1Score : @m.Team2Score</div>
+    <div class="side right">Team 2</div>
+</div>
+
+@foreach (var team in Model.Teams())
+{
+    <section class="section">
+        <div class="section-head">
+            <h2>@team.Title</h2>
+            @if (team.Outcome is not null)
+            {
+                <span class="hint">@team.Outcome</span>
+            }
+        </div>
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th>Player</th>
+                        <th class="num">K</th>
+                        <th class="num">D</th>
+                        <th class="num">A</th>
+                        <th class="num">K/D</th>
+                        <th class="num">HS %</th>
+                        <th class="num">Damage</th>
+                        <th class="num">ADR</th>
+                        <th>Result</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (team.Players.Count == 0)
+                    {
+                        <tr><td colspan="9" class="empty">No players recorded for this side.</td></tr>
+                    }
+                    @foreach (var r in team.Players)
+                    {
+                        <tr>
+                            <td><a class="row-link" asp-page="/Players/Profile" asp-route-id="@r.PlayerId">@r.DisplayName</a></td>
+                            <td class="num">@r.Kills</td>
+                            <td class="num">@r.Deaths</td>
+                            <td class="num">@r.Assists</td>
+                            <td class="num">@Fmt.Num(r.Deaths == 0 ? null : (decimal)r.Kills / r.Deaths)</td>
+                            <td class="num">@Fmt.Pct(r.HeadshotPercentage)</td>
+                            <td class="num">@Fmt.Int(r.Damage)</td>
+                            <td class="num">@Fmt.Num(r.Adr, "0.0")</td>
+                            <td><span class="@Fmt.ResultClass(r.Result)">@Fmt.ResultText(r.Result)</span></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+
+@* ---- Round timeline (Tracker.Rounds) ---- *@
+<section class="section" aria-labelledby="rounds-h">
+    <div class="section-head">
+        <h2 id="rounds-h">Rounds</h2>
+        <p class="hint">Team 1 starts CT and the sides swap at half time.</p>
+    </div>
+    @if (Model.Rounds.Count == 0)
+    {
+        <div class="panel empty">No round-by-round data for this match. Matches imported by hand only have the final score.</div>
+    }
+    else
+    {
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th class="num">Round</th>
+                        <th>Winner</th>
+                        <th>How</th>
+                        <th class="num">Length</th>
+                        <th class="num">Score after</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @{ var t1 = 0; var t2 = 0; }
+                    @foreach (var r in Model.Rounds)
+                    {
+                        if (r.WinningTeam == 1) { t1++; } else { t2++; }
+                        <tr>
+                            <td class="num">@r.RoundNumber</td>
+                            <td>Team @r.WinningTeam</td>
+                            <td>@Fmt.Reason(r.WinReason)</td>
+                            <td class="num">@Fmt.Duration(r.DurationSeconds)</td>
+                            <td class="num score">@t1 – @t2</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+</section>
+
+<p><a asp-page="/Matches/Index">← Back to matches</a></p>
