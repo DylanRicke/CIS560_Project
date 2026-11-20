@@ -8,7 +8,7 @@
     Sections marked  [ADDED]  are additions proposed on top of the approved design
     (Rounds, RankHistory, Friendship status, Player SteamID/CreatedOn/IsRemoved).
     If the team decides against one, delete that block here AND set the matching
-    flag in tools/generate_data.py before regenerating the data.
+    flag in tools/DataGenerator/Program.cs (Settings) before regenerating the data.
 */
 
 /* ---------- Drop existing objects (reverse dependency order) ---------- */

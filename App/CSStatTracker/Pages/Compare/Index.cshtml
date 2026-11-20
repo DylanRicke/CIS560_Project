@@ -1,0 +1,174 @@
+@page
+@model CSStatTracker.Pages.Compare.IndexModel
+@{
+    ViewData["Title"] = "Compare friends";
+    var me = Model.Me;
+}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Friends</p>
+        <h1>Compare with friends</h1>
+        <p class="sub">Each difference is you minus your friend: a positive number (▲) means you're ahead on that stat, a negative one (▼) means they are.</p>
+    </div>
+</div>
+
+<form method="get" class="filters" aria-label="Choose player and dates">
+    <label>Player
+        <select name="PlayerId">
+            @foreach (var p in Model.Players)
+            {
+                <option value="@p.PlayerId" selected="@(p.PlayerId == Model.PlayerId)">@p.DisplayName</option>
+            }
+        </select>
+    </label>
+    <label>From
+        <input type="date" name="From" value="@Fmt.Iso(Model.From)" />
+    </label>
+    <label>To
+        <input type="date" name="To" value="@Fmt.Iso(Model.To)" />
+    </label>
+    <div class="actions">
+        <button class="btn btn-primary" type="submit">Compare</button>
+    </div>
+</form>
+
+@if (Model.Player is null)
+{
+    <div class="panel empty">Add a player first.</div>
+}
+else
+{
+    <div class="split">
+        <section class="section" aria-labelledby="cmp-h">
+            <div class="section-head">
+                <h2 id="cmp-h"><a asp-page="/Players/Profile" asp-route-id="@Model.Player.PlayerId">@Model.Player.DisplayName</a> vs friends</h2>
+            </div>
+            @if (me is not null)
+            {
+                <div class="me-strip">
+                    <span>Your K/D <b>@Fmt.Num(me.PlayerKd)</b></span>
+                    <span>Your ADR <b>@Fmt.Num(me.PlayerAdr, "0.0")</b></span>
+                    <span>Your win rate <b>@Fmt.Pct(me.PlayerWinRate)</b></span>
+                    @if (me.PlayerKd is null && me.PlayerAdr is null)
+                    {
+                        <span>You have no matches in this range, so there's nothing to compare.</span>
+                    }
+                </div>
+            }
+            <div class="table-wrap">
+                <table class="data">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">Friend</th>
+                            <th rowspan="2" class="num">Matches</th>
+                            <th colspan="2" class="num">K/D</th>
+                            <th colspan="2" class="num">ADR</th>
+                            <th colspan="2" class="num">Win rate</th>
+                        </tr>
+                        <tr>
+                            <th class="num">Friend</th>
+                            <th class="num">You vs</th>
+                            <th class="num">Friend</th>
+                            <th class="num">You vs</th>
+                            <th class="num">Friend</th>
+                            <th class="num">You vs</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.Rows.Count == 0)
+                        {
+                            <tr><td colspan="8" class="empty">@Model.Player.DisplayName has no accepted friends yet. Send a request on the right.</td></tr>
+                        }
+                        @foreach (var r in Model.Rows)
+                        {
+                            <tr>
+                                <td><a class="row-link" asp-page="/Players/Profile" asp-route-id="@r.FriendId">@r.FriendName</a></td>
+                                <td class="num">@r.FriendGamesPlayed</td>
+                                <td class="num">@Fmt.Num(r.FriendKd)</td>
+                                <td class="num">@Fmt.Diff(r.KdDifference)</td>
+                                <td class="num">@Fmt.Num(r.FriendAdr, "0.0")</td>
+                                <td class="num">@Fmt.Diff(r.AdrDifference, "0.0")</td>
+                                <td class="num">@Fmt.Pct(r.FriendWinRate)</td>
+                                <td class="num">@Fmt.Diff(r.WinRateDifference, "0.0", " pts")</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            <p class="hint">Friends with no matches in this range show dashes. Win rate counts ties as matches played but not as wins.</p>
+        </section>
+
+        <aside class="panel section" aria-labelledby="friends-h">
+            <h2 id="friends-h">Friends (@Model.Accepted.Count)</h2>
+            <form method="post" asp-page-handler="AddFriend" class="inline-form">
+                <input type="hidden" name="playerId" value="@Model.Player.PlayerId" />
+                <input type="hidden" name="From" value="@Fmt.Iso(Model.From)" />
+                <input type="hidden" name="To" value="@Fmt.Iso(Model.To)" />
+                <select name="friendId" aria-label="Player to send a friend request to">
+                    <option value="">Send a friend request…</option>
+                    @foreach (var c in Model.Candidates)
+                    {
+                        <option value="@c.PlayerId">@c.DisplayName</option>
+                    }
+                </select>
+                <button class="btn" type="submit">Send</button>
+            </form>
+
+            @if (Model.Incoming.Count > 0)
+            {
+                <h3>Requests for @Model.Player.DisplayName (@Model.Incoming.Count)</h3>
+                <ul class="friend-list">
+                    @foreach (var f in Model.Incoming)
+                    {
+                        <li>
+                            <span>
+                                <a asp-page="/Players/Profile" asp-route-id="@f.OtherPlayerId">@f.DisplayName</a>
+                                <small>sent @Fmt.Day(f.RequestedOn)</small>
+                            </span>
+                            <span class="form-actions">
+                                @foreach (var accept in new[] { true, false })
+                                {
+                                    <form method="post" asp-page-handler="Respond">
+                                        <input type="hidden" name="playerId" value="@Model.Player.PlayerId" />
+                                        <input type="hidden" name="requesterId" value="@f.OtherPlayerId" />
+                                        <input type="hidden" name="accept" value="@(accept ? "true" : "false")" />
+                                        <input type="hidden" name="From" value="@Fmt.Iso(Model.From)" />
+                                        <input type="hidden" name="To" value="@Fmt.Iso(Model.To)" />
+                                        <button class="btn btn-small @(accept ? "btn-primary" : "")" type="submit">@(accept ? "Accept" : "Decline")</button>
+                                    </form>
+                                }
+                            </span>
+                        </li>
+                    }
+                </ul>
+            }
+
+            <ul class="friend-list">
+                @foreach (var f in Model.Accepted.Concat(Model.Outgoing))
+                {
+                    <li>
+                        <span>
+                            <a asp-page="/Players/Profile" asp-route-id="@f.OtherPlayerId">@f.DisplayName</a>
+                            @if (f.IsAccepted)
+                            {
+                                <small>Premier @Fmt.Premier(f.PremierRank) · friends since @Fmt.Day(f.FriendsSince!.Value)</small>
+                            }
+                            else
+                            {
+                                <small>request pending since @Fmt.Day(f.RequestedOn)</small>
+                            }
+                        </span>
+                        <form method="post" asp-page-handler="RemoveFriend">
+                            <input type="hidden" name="playerId" value="@Model.Player.PlayerId" />
+                            <input type="hidden" name="friendId" value="@f.OtherPlayerId" />
+                            <input type="hidden" name="From" value="@Fmt.Iso(Model.From)" />
+                            <input type="hidden" name="To" value="@Fmt.Iso(Model.To)" />
+                            <button class="btn btn-small btn-danger" type="submit" aria-label="@(f.IsAccepted ? "Unfriend" : "Cancel request to") @f.DisplayName">@(f.IsAccepted ? "Remove" : "Cancel")</button>
+                        </form>
+                    </li>
+                }
+            </ul>
+        </aside>
+    </div>
+}

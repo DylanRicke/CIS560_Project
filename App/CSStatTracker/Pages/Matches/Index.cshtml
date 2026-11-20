@@ -1,0 +1,116 @@
+@page
+@model CSStatTracker.Pages.Matches.IndexModel
+@{
+    ViewData["Title"] = "Matches";
+    var showPlayer = Model.PlayerId is not null;
+}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Match history</p>
+        <h1>Matches</h1>
+        <p class="sub">
+            @Fmt.Int(Model.TotalRows) matches@(showPlayer ? $" with {Model.SelectedPlayerName}" : ""), newest first.
+        </p>
+    </div>
+    <a class="btn btn-primary" asp-page="/Matches/Import">Import a match</a>
+</div>
+
+<form method="get" class="filters" aria-label="Filter matches">
+    <label>Player
+        <select name="PlayerId">
+            <option value="">Any player</option>
+            @foreach (var p in Model.Players)
+            {
+                <option value="@p.PlayerId" selected="@(p.PlayerId == Model.PlayerId)">@p.DisplayName@(p.IsRemoved ? " (removed)" : "")</option>
+            }
+        </select>
+    </label>
+    <label>Map
+        <select name="MapId">
+            <option value="">Any map</option>
+            @foreach (var m in Model.Maps)
+            {
+                <option value="@m.MapId" selected="@(m.MapId == Model.MapId)">@m.MapName</option>
+            }
+        </select>
+    </label>
+    <label>Mode
+        <select name="ModeId">
+            <option value="">Any mode</option>
+            @foreach (var m in Model.Modes)
+            {
+                <option value="@m.GameModeId" selected="@(m.GameModeId == Model.ModeId)">@m.ModeName</option>
+            }
+        </select>
+    </label>
+    <label>From
+        <input type="date" name="From" value="@Fmt.Iso(Model.From)" />
+    </label>
+    <label>To
+        <input type="date" name="To" value="@Fmt.Iso(Model.To)" />
+    </label>
+    <div class="actions">
+        <button class="btn btn-primary" type="submit">Search</button>
+        <a class="btn" asp-page="/Matches/Index">Clear</a>
+    </div>
+</form>
+
+<div class="table-wrap">
+    <table class="data">
+        <thead>
+            <tr>
+                <th>Date</th>
+                <th>Map</th>
+                <th>Mode</th>
+                <th class="num">Score</th>
+                <th class="num">Players</th>
+                @if (showPlayer)
+                {
+                    <th>Result</th>
+                    <th class="num">K–D</th>
+                }
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Results.Count == 0)
+            {
+                <tr><td colspan="8" class="empty">No matches fit these filters. Clear a filter or widen the dates.</td></tr>
+            }
+            @foreach (var m in Model.Results)
+            {
+                <tr>
+                    <td><a class="row-link" asp-page="/Matches/Details" asp-route-id="@m.MatchId">@Fmt.When(m.MatchDate)</a></td>
+                    <td>@m.MapName</td>
+                    <td>@m.ModeName</td>
+                    <td class="num score">@m.Team1Score – @m.Team2Score</td>
+                    <td class="num">@m.PlayerCount</td>
+                    @if (showPlayer)
+                    {
+                        <td><span class="@Fmt.ResultClass(m.PlayerResult)">@Fmt.ResultText(m.PlayerResult)</span></td>
+                        <td class="num">@m.PlayerKills – @m.PlayerDeaths</td>
+                    }
+                    <td></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
+
+@if (Model.TotalRows > 0)
+{
+    <nav class="pager" aria-label="Pages">
+        <span>Page @Model.PageNumber of @Model.TotalPages</span>
+        <span class="links">
+            @if (Model.PageNumber > 1)
+            {
+                <a class="btn btn-small" href="@Model.PageUrl(Model.PageNumber - 1)">Newer</a>
+            }
+            @if (Model.PageNumber < Model.TotalPages)
+            {
+                <a class="btn btn-small" href="@Model.PageUrl(Model.PageNumber + 1)">Older</a>
+            }
+        </span>
+    </nav>
+}

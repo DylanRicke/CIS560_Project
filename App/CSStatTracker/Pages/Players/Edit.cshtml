@@ -1,0 +1,49 @@
+@page "{id:int?}"
+@model CSStatTracker.Pages.Players.EditModel
+@{
+    ViewData["Title"] = Model.IsNew ? "Add a player" : "Edit player";
+}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Players</p>
+        <h1>@(Model.IsNew ? "Add a player" : $"Edit {Model.Input.DisplayName}")</h1>
+        <p class="sub">SteamIDs must be unique. Leave a rank empty if the player is unranked. Changing the Premier rating also adds a point to their rating history.</p>
+    </div>
+</div>
+
+<partial name="_Errors" model="ViewData.ModelState" />
+
+<form method="post" class="panel section">
+    <div class="form-grid">
+        <label>SteamID (17 digits)
+            <input asp-for="Input.SteamId" inputmode="numeric" maxlength="17" pattern="\d{17}" required autocomplete="off" placeholder="76561198000000000" />
+        </label>
+        <label>Display name
+            <input asp-for="Input.DisplayName" maxlength="32" required autocomplete="off" />
+        </label>
+        <label>Premier rating
+            <input asp-for="Input.PremierRank" type="number" min="0" max="40000" step="1" placeholder="Unranked" />
+        </label>
+        <label>Competitive rank (best map)
+            <select name="Input.CompetitiveRank">
+                <option value="">Unranked</option>
+                @for (var i = 1; i <= CompetitiveRanks.Names.Length; i++)
+                {
+                    <option value="@i" selected="@(Model.Input.CompetitiveRank == i)">@CompetitiveRanks.Names[i - 1]</option>
+                }
+            </select>
+        </label>
+    </div>
+    <div class="form-actions">
+        <button class="btn btn-primary" type="submit">@(Model.IsNew ? "Add player" : "Save changes")</button>
+        @if (Model.IsNew)
+        {
+            <a class="btn" asp-page="/Players/Index">Cancel</a>
+        }
+        else
+        {
+            <a class="btn" asp-page="/Players/Profile" asp-route-id="@Model.PlayerId">Cancel</a>
+        }
+    </div>
+</form>

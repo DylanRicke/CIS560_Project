@@ -1,0 +1,227 @@
+@page "{id:int}"
+@model CSStatTracker.Pages.Players.ProfileModel
+@{
+    var p = Model.Player;
+    var t = Model.Totals;
+    ViewData["Title"] = p.DisplayName;
+    var from = Model.From!.Value;
+    var to = Model.To!.Value;
+    var lastTrend = Model.Trend.LastOrDefault();
+}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Premier @Fmt.Premier(p.PremierRank) · @Fmt.Competitive(p.CompetitiveRank) · joined @Fmt.Day(p.CreatedOn)</p>
+        <h1>@p.DisplayName</h1>
+        <p class="sub">SteamID <code>@p.SteamId</code>
+            @if (p.IsRemoved) { <span class="badge removed">Removed · hidden from lists</span> }
+        </p>
+    </div>
+    <div class="form-actions">
+        <a class="btn" asp-page="/Matches/Index" asp-route-PlayerId="@p.PlayerId">Match history</a>
+        <a class="btn" asp-page="/Compare/Index" asp-route-PlayerId="@p.PlayerId" asp-route-From="@Fmt.Iso(from)" asp-route-To="@Fmt.Iso(to)">Compare with friends</a>
+        <a class="btn" asp-page="/Players/Edit" asp-route-id="@p.PlayerId">Edit</a>
+        <form method="post" asp-page-handler="SetRemoved" asp-route-id="@p.PlayerId">
+            <input type="hidden" name="remove" value="@(p.IsRemoved ? "false" : "true")" />
+            @if (p.IsRemoved)
+            {
+                <button class="btn" type="submit">Restore player</button>
+            }
+            else
+            {
+                <button class="btn btn-danger" type="submit">Remove player</button>
+            }
+        </form>
+    </div>
+</div>
+
+<form method="get" class="filters" aria-label="Date range">
+    <label>From
+        <input type="date" name="From" value="@Fmt.Iso(from)" />
+    </label>
+    <label>To
+        <input type="date" name="To" value="@Fmt.Iso(to)" />
+    </label>
+    <div class="actions">
+        <button class="btn btn-primary" type="submit">Update</button>
+    </div>
+    <div class="range-links">
+        <a href="@Model.RangeUrl(Model.Today.AddMonths(-3), Model.Today)">Last 3 months</a>
+        <a href="@Model.RangeUrl(Model.Today.AddYears(-1), Model.Today)">Last 12 months</a>
+        <a href="@Model.RangeUrl(DateOnly.FromDateTime(p.CreatedOn), Model.Today)">Since joining</a>
+    </div>
+</form>
+
+@* ---- Aggregating query 1: Report_PlayerTotals ---- *@
+<section class="section" aria-labelledby="totals-h">
+    <div class="section-head">
+        <h2 id="totals-h">Totals since @Fmt.Day(from)</h2>
+    </div>
+    @if (t is null || t.GamesPlayed == 0)
+    {
+        <div class="panel empty">No matches since @Fmt.Day(from). Pick an earlier start date.</div>
+    }
+    else
+    {
+        <div class="tiles">
+            <div class="tile"><span class="label">Matches</span><span class="value">@Fmt.Int(t.GamesPlayed)</span><span class="detail">@Fmt.Int(t.TotalWins) wins · @Fmt.Pct(t.WinRate)</span></div>
+            <div class="tile"><span class="label">Kills</span><span class="value">@Fmt.Int(t.TotalKills)</span><span class="detail">K/D @Fmt.Num(t.KillDeathRatio)</span></div>
+            <div class="tile"><span class="label">Deaths</span><span class="value">@Fmt.Int(t.TotalDeaths)</span><span class="detail">HS @Fmt.Pct(t.AvgHeadshotPct) avg</span></div>
+            <div class="tile"><span class="label">Assists</span><span class="value">@Fmt.Int(t.TotalAssists)</span><span class="detail">&nbsp;</span></div>
+            <div class="tile"><span class="label">Damage</span><span class="value">@Fmt.Int(t.TotalDamage)</span><span class="detail">@Fmt.Int(t.TotalDamage / t.GamesPlayed) per match</span></div>
+        </div>
+    }
+</section>
+
+@* ---- Aggregating query 4: Report_PlayerMonthlyTrend ---- *@
+<section class="section" aria-labelledby="trend-h">
+    <div class="section-head">
+        <h2 id="trend-h">Month by month</h2>
+        <p class="hint">@Fmt.Day(from) to @Fmt.Day(to). Months with no matches are skipped.</p>
+    </div>
+    @if (Model.Trend.Count == 0)
+    {
+        <div class="panel empty">No matches in this range.</div>
+    }
+    else
+    {
+        <div class="charts">
+            <div class="chart-card">
+                <div class="chart-title">K/D ratio <span class="latest">latest @Fmt.Num(lastTrend?.KillDeathRatio)</span></div>
+                <div class="chart-box"><canvas id="chart-kd" aria-label="K/D ratio by month" role="img"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Average damage per round <span class="latest">latest @Fmt.Num(lastTrend?.AverageDamagePerRound, "0.0")</span></div>
+                <div class="chart-box"><canvas id="chart-adr" aria-label="ADR by month" role="img"></canvas></div>
+            </div>
+            <div class="chart-card">
+                <div class="chart-title">Win rate <span class="latest">latest @Fmt.Pct(lastTrend?.WinRate)</span></div>
+                <div class="chart-box"><canvas id="chart-win" aria-label="Win rate by month" role="img"></canvas></div>
+            </div>
+        </div>
+
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                    <tr>
+                        <th>Month</th>
+                        <th class="num">Matches</th>
+                        <th class="num">K/D</th>
+                        <th class="num">ADR</th>
+                        <th class="num">Win rate</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var row in Model.Trend.AsEnumerable().Reverse())
+                    {
+                        <tr>
+                            <td>@row.Month.ToString("MMMM yyyy", System.Globalization.CultureInfo.InvariantCulture)</td>
+                            <td class="num">@row.NumGames</td>
+                            <td class="num">@Fmt.Num(row.KillDeathRatio)</td>
+                            <td class="num">@Fmt.Num(row.AverageDamagePerRound, "0.0")</td>
+                            <td class="num">@Fmt.Pct(row.WinRate)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <script type="application/json" id="trend-data">@Html.Raw(Model.TrendJson())</script>
+    }
+</section>
+
+@* ---- Rank history (Tracker.RankHistory) ---- *@
+<section class="section" aria-labelledby="rank-h">
+    <div class="section-head">
+        <h2 id="rank-h">Ranks</h2>
+        <p class="hint">Premier rating changes after every Premier match. Competitive rank is per map in CS2.</p>
+    </div>
+    <div class="split">
+        <div class="chart-card">
+            <div class="chart-title">Premier rating <span class="latest">now @Fmt.Premier(p.PremierRank)</span></div>
+            @if (Model.PremierHistory.Count == 0)
+            {
+                <div class="empty">No Premier rating changes in this range.</div>
+            }
+            else
+            {
+                <div class="chart-box"><canvas id="chart-premier" aria-label="Premier rating over time" role="img"></canvas></div>
+                <script type="application/json" id="premier-data">@Html.Raw(Model.PremierJson())</script>
+            }
+        </div>
+        <div class="table-wrap">
+            <table class="data">
+                <thead>
+                    <tr><th>Map</th><th>Competitive rank</th><th>Last change</th></tr>
+                </thead>
+                <tbody>
+                    @if (Model.CompetitiveByMap.Count == 0)
+                    {
+                        <tr><td colspan="3" class="empty">No Competitive ranks yet.</td></tr>
+                    }
+                    @foreach (var r in Model.CompetitiveByMap)
+                    {
+                        <tr>
+                            <td>@r.MapName</td>
+                            <td>@Fmt.Competitive(r.RankValue)</td>
+                            <td>@Fmt.Day(r.RecordedOn)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</section>
+
+@* ---- Aggregating query 3: Report_PlayerMapStats ---- *@
+<section class="section" aria-labelledby="maps-h">
+    <div class="section-head">
+        <h2 id="maps-h">Best maps</h2>
+        <p class="hint">Ranked by win rate, then average damage. Only maps with at least 5 matches in this range.</p>
+    </div>
+    <div class="table-wrap">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th class="num">#</th>
+                    <th>Map</th>
+                    <th class="num">Matches</th>
+                    <th class="num">Wins</th>
+                    <th class="num">Win rate</th>
+                    <th class="num">Avg kills</th>
+                    <th class="num">Avg damage</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.MapStats.Count == 0)
+                {
+                    <tr><td colspan="7" class="empty">No map has 5 or more matches in this range. Try a longer range.</td></tr>
+                }
+                @foreach (var m in Model.MapStats)
+                {
+                    <tr>
+                        <td class="num">@m.MapRank</td>
+                        <td>@m.MapName</td>
+                        <td class="num">@m.GamesPlayed</td>
+                        <td class="num">@m.Wins</td>
+                        <td class="num">
+                            <span class="bar-cell">
+                                @Fmt.Pct(m.WinRate)
+                                <span class="bar-track" aria-hidden="true"><span class="bar-fill" style="width:@(Math.Clamp(m.WinRate, 0, 100).ToString(System.Globalization.CultureInfo.InvariantCulture))%"></span></span>
+                            </span>
+                        </td>
+                        <td class="num">@Fmt.Num(m.AvgKills, "0.0")</td>
+                        <td class="num">@Fmt.Num(m.AvgDamage, "0")</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@section Scripts {
+    @if (Model.Trend.Count > 0 || Model.PremierHistory.Count > 0)
+    {
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+        <script src="~/js/profile-charts.js" asp-append-version="true"></script>
+    }
+}

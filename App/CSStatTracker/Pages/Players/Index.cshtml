@@ -1,0 +1,62 @@
+@page
+@model CSStatTracker.Pages.Players.IndexModel
+@{
+    ViewData["Title"] = "Players";
+}
+
+<div class="page-head">
+    <div>
+        <p class="eyebrow">Roster</p>
+        <h1>Players</h1>
+        <p class="sub">@Fmt.Int(Model.Results.Count) players@(string.IsNullOrWhiteSpace(Model.Search) ? "" : " match your search"). Open a player for their totals, ranks, best maps and monthly trend.</p>
+    </div>
+    <a class="btn btn-primary" asp-page="/Players/Edit">Add a player</a>
+</div>
+
+<form method="get" class="filters" aria-label="Search players">
+    <label>Name or SteamID
+        <input type="search" name="Search" value="@Model.Search" placeholder="e.g. Ghost or 7656119" />
+    </label>
+    <div class="actions">
+        <label class="check"><input type="checkbox" name="IncludeRemoved" value="true" checked="@Model.IncludeRemoved" /> Show removed</label>
+        <button class="btn btn-primary" type="submit">Search</button>
+        <a class="btn" asp-page="/Players/Index">Clear</a>
+    </div>
+</form>
+
+<div class="table-wrap">
+    <table class="data">
+        <thead>
+            <tr>
+                <th>Player</th>
+                <th class="num">Premier</th>
+                <th>Competitive</th>
+                <th>SteamID</th>
+                <th>Joined</th>
+                <th class="num">Matches</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            @if (Model.Results.Count == 0)
+            {
+                <tr><td colspan="7" class="empty">No players match that search.</td></tr>
+            }
+            @foreach (var p in Model.Results)
+            {
+                <tr class="@(p.IsRemoved ? "removed" : "")">
+                    <td>
+                        <a class="row-link" asp-page="/Players/Profile" asp-route-id="@p.PlayerId">@p.DisplayName</a>
+                        @if (p.IsRemoved) { <span class="badge removed">Removed</span> }
+                    </td>
+                    <td class="num">@Fmt.Premier(p.PremierRank)</td>
+                    <td>@Fmt.Competitive(p.CompetitiveRank)</td>
+                    <td><code>@p.SteamId</code></td>
+                    <td>@Fmt.Day(p.CreatedOn)</td>
+                    <td class="num">@Fmt.Int(p.GamesPlayed)</td>
+                    <td><a asp-page="/Players/Edit" asp-route-id="@p.PlayerId">Edit</a></td>
+                </tr>
+            }
+        </tbody>
+    </table>
+</div>
